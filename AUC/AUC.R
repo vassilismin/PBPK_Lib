@@ -1,4 +1,12 @@
+#------------------------------------------------------------------#
+# This is a custom function to calculate the Area Under the Curve. #
+#------------------------------------------------------------------#
+
 AUC <- function(x, y){
+  if(length(x)!=length(y)){
+    stop("x and y must have equal number of data")
+  }
+  
   individual_auc <- c()
   for (i in 1:(length(x)-1)){
     individual_auc[i] <- (y[i]+y[i+1])*(x[i+1]-x[i])/2
