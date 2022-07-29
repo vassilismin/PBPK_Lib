@@ -1,5 +1,5 @@
 library(deSolve)
-setwd("C:/Users/vassi/Documents/GitHub/PBPK_Lib")
+setwd("C:/Users/vassi/Documents/GitHub/Data/PBPK_Lib")
 
 dose_kg <- 10 # mg/kg rat body
 mass <- 250 # g  
@@ -308,7 +308,8 @@ ode.func <- function(time, inits, params){
            "dM_cap_ki" = dM_cap_ki, "dM_cap_git" = dM_cap_git, 
            "dM_cap_bone" = dM_cap_bone,"dM_cap_rob"=dM_cap_rob,
            
-           "dM_ven" = dM_ven, "dM_art" = dM_art, "dM_feces" = dM_feces, "dM_urine" = dM_urine),
+           "dM_ven" = dM_ven, "dM_art" = dM_art, "dM_feces" = dM_feces, 
+           "dM_urine" = dM_urine),
          
          "Blood"=Blood,
          "Heart"=C_ht, "Lungs"=C_lu, "Liver"=C_li, "Spleen"=C_spl,
@@ -322,10 +323,10 @@ ode.func <- function(time, inits, params){
 # Prepare input
 #-----------------
 
-parms <- c("x_gen" = 0.001, # random value - unitless
-           "P_gen" = 0.001, # random value - unitless
-           "CLE_f" = 0.001,
-           "CLE_u" = 0.001)
+parms <- c("x_gen" = 0.1, # random value - unitless
+           "P_gen" = 0.1, # random value - unitless
+           "CLE_f" = 0.1,
+           "CLE_u" = 0.1)
 
 params<-create.params(compartments,mass)
 inits <- create.inits(params, dose)
@@ -379,31 +380,39 @@ PBPK_sensitivity <- function(model, parms, ranges, target, method,
   
   if(method=="Local"){
     # Local Sensitivity Analysis
-    if(!is.numeric(ranges) & length(ranges) != 1){
-      stop("For local sensitivity analysis \"ranges\" must be 
-      a single numeric between 0 and 1")
-    }
     
     # Store the initial values of the parms in a vector
     parms_0 <- parms
     
-    # The variation dp of each parameters will be equal to "ranges" value 
-    dp <- ranges
+    # The variation dp of each parameter will be equal to "ranges" value 
+    if(!is.numeric(ranges) | length(ranges) != 1 | ranges<=0 | ranges>1){
+      # "ranges" must be a single numeric value in (0,1]
+      stop("For local sensitivity analysis \"ranges\"  should be 
+           a single numeric value in (0,1]")
+    }else{dp <- ranges}
+    
     
     # Relative Sensitivity = (dAUC/AUC)/(dp/p)
     
     N_parms <- length(parms_0) # The total number of parameters to be analysed
     
     
-    constant_params <- ode_settings[[1]]
-    inits <- ode_settings[[2]]
-    sample_time <- ode_settings[[3]]
+    constant_params <- ode_settings[[1]] # Take the constant parameters
+                                         #of the model
+    inits <- ode_settings[[2]] # Initial conditions of the ODEs
+    sample_time <- ode_settings[[3]] # Time points of solution
     solver <- ifelse(ode_settings[[4]] == "default", "bdf", ode_settings[[4]])
+    # Select the solver to use later
     
     # Calculate the ODEs for the initial parameters
     solution_0 <- ode(times=sample_time, func=model, y=inits, 
                       parms=c(constant_params, parms_0), 
                       method=solver, rtol=1e-5, atol=1e-5)
+    
+    if(!(target %in% colnames(solution_0))){
+      stop("As \"target\" should be provided the name of one of the outputs 
+      (compertments) of the PBPK model")
+    }
     
     # Calculate AUC of the target compartment for the initial parameters
     AUC_0 <- AUC(solution_0[,"time"],solution_0[,target])
@@ -411,7 +420,8 @@ PBPK_sensitivity <- function(model, parms, ranges, target, method,
     # Initialize a vector to store the sensitivity indexes
     SI <- c()
     for (i in 1:N_parms) {
-      parms[i] <- parms_0[i]*(1 + dp)
+      parms <- parms_0
+      parms[i] <- parms[i]*(1 + dp)
       # Merge the new parms vector with the constant params of the model
       params <- c(constant_params, parms)
       
@@ -423,19 +433,24 @@ PBPK_sensitivity <- function(model, parms, ranges, target, method,
       AUC_i <- AUC(solution[,"time"],solution[,target])
       
       # Calculate sensitivity index of parameter i 
-      SI[i] <- (AUC_i/AUC_0)/(dp/ parms_0[i])
+      # Relative Sensitivity = (dAUC/AUC)/(dp/p)
+      SI[i] <- ((AUC_i-AUC_0)/AUC_0)/(dp/ parms_0[i])
       
     }
+        
+    data_list <- list("Method"=method, "Target"=target,
+                      "Change of parameters" = dp,
+                      "Parameters" = parms_0, 
+                      "Sensitivity Indexes"=SI)
     
-    
-    return(SI)
+    return(data_list)
   }else{
     print("Global Sensitivity not ready!")
   }
 }
 
-PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.5, target = "Lungs",
+test <- PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.01, target = "Lungs",
                  method = "Local",ode_settings = ode_settings) 
-
+test
 
 
