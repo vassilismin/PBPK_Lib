@@ -1,0 +1,17 @@
+Blood   
+Heart  
+Lungs   
+Liver  
+Spleen 
+Kidneys 
+Intestine + Stomach = Gastrointestinal track  
+Brain    
+Bone = Removed due to zeros
+
+All physiological parameters same as my diploma thesis 
+
+Added physiological parameters for GIT are taken from Brown et al.1997
+
+		Mass fraction %		Regional flow fraction %	Capillary as fraction of tissue volume
+GIT 	2.7					14 (p. 38 of pdf)		0.05			
+
