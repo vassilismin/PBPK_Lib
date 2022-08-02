@@ -366,14 +366,13 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
            a single numeric value in (0,1]")
     }else{dp <- ranges}
     
-    
-    # Relative Sensitivity = (dAUC/AUC)/(dp/p)
-    
+    # Get the number of the parameters and targets
     N_parms <- length(parms_0) # The total number of parameters to be analysed
     N_targets <- length(targets)
     
+    # Take all objects from the ode_settings list 
     constant_params <- ode_settings[[1]] # Take the constant parameters
-    #of the model
+                                         # of the model
     inits <- ode_settings[[2]] # Initial conditions of the ODEs
     sample_time <- ode_settings[[3]] # Time points of solution
     solver <- ifelse(ode_settings[[4]] == "default", "bdf", ode_settings[[4]])
