@@ -1,5 +1,8 @@
 library(deSolve)
-setwd("C:/Users/vassi/Documents/GitHub/Data/PBPK_Lib")
+library(ggplot2)
+
+# Set the path to load the necessary data 
+setwd("C:/Users/vassi/Documents/GitHub/PBPK_Lib/Data")
 
 dose_kg <- 10 # mg/kg rat body
 mass <- 250 # g  
@@ -333,9 +336,9 @@ inits <- create.inits(params, dose)
 sample_time <- c(0,1,3,7, 15, 30)*24 # hours
 
 ode_settings <- list(params=params, 
-                 inits=inits,
-                 sample_time=sample_time,
-                 solver= "default")
+                     inits=inits,
+                     sample_time=sample_time,
+                     solver= "default")
 
 
 # start_time <- Sys.time()
@@ -362,8 +365,8 @@ AUC <- function(x, y){
 # SENSITIVITY ANALYSIS FUNCTION for PBPK Models
 #---------------------------------------------------
 
-PBPK_sensitivity <- function(model, parms, ranges, target, method,
-                             ode_settings){
+PBPK_sensitivity <- function(model, parms, ranges, targets, method,
+                             ode_settings, heatmap = FALSE){
   
   if(is.null(model)){
     stop("The ODEs of the PBPK model must be provided as a function compatible
@@ -395,10 +398,10 @@ PBPK_sensitivity <- function(model, parms, ranges, target, method,
     # Relative Sensitivity = (dAUC/AUC)/(dp/p)
     
     N_parms <- length(parms_0) # The total number of parameters to be analysed
-    
+    N_targets <- length(targets)
     
     constant_params <- ode_settings[[1]] # Take the constant parameters
-                                         #of the model
+    #of the model
     inits <- ode_settings[[2]] # Initial conditions of the ODEs
     sample_time <- ode_settings[[3]] # Time points of solution
     solver <- ifelse(ode_settings[[4]] == "default", "bdf", ode_settings[[4]])
@@ -409,16 +412,18 @@ PBPK_sensitivity <- function(model, parms, ranges, target, method,
                       parms=c(constant_params, parms_0), 
                       method=solver, rtol=1e-5, atol=1e-5)
     
-    if(!(target %in% colnames(solution_0))){
-      stop("As \"target\" should be provided the name of one of the outputs 
-      (compertments) of the PBPK model")
+    if(sum(!(targets %in% colnames(solution_0))) != 0){
+      stop("As \"targets\" should be provided the name(s) of one or more
+      of the outputs (compertments) of the PBPK model")
     }
     
-    # Calculate AUC of the target compartment for the initial parameters
-    AUC_0 <- AUC(solution_0[,"time"],solution_0[,target])
+    # Calculate AUC of each target-compartment for the initial parameters
+    for (i in 1:N_targets) {
+      AUC_0[i] <- AUC(solution_0[,"time"],solution_0[,targets[i]])
+    }
     
     # Initialize a vector to store the sensitivity indexes
-    SI <- c()
+    SI <- matrix(NA, nrow = N_parms, ncol = N_targets)
     for (i in 1:N_parms) {
       parms <- parms_0
       parms[i] <- parms[i]*(1 + dp)
@@ -429,28 +434,86 @@ PBPK_sensitivity <- function(model, parms, ranges, target, method,
       solution <- ode(times=sample_time, func=model, y=inits, parms=params, 
                       method=solver, rtol=1e-5, atol=1e-5)
       
-      # Calculate AUC for the target compartment
-      AUC_i <- AUC(solution[,"time"],solution[,target])
-      
-      # Calculate sensitivity index of parameter i 
-      # Relative Sensitivity = (dAUC/AUC)/(dp/p)
-      SI[i] <- ((AUC_i-AUC_0)/AUC_0)/(dp/ parms_0[i])
-      
-    }
+      for (j in 1:N_targets) {
+        # Calculate AUC for the target compartment j
+        AUC_j <- AUC(solution[,"time"],solution[,targets[j]])
         
-    data_list <- list("Method"=method, "Target"=target,
-                      "Change of parameters" = dp,
-                      "Parameters" = parms_0, 
-                      "Sensitivity Indexes"=SI)
+        # Calculate sensitivity index of parameter i 
+        # Relative Sensitivity = (dAUC/AUC)/(dp/p)
+        SI[i,j] <- ((AUC_j-AUC_0[j])/AUC_0[j])/(dp/ parms_0[i])
+      }
+    }
+    rownames(SI) <- names(parms)
+    colnames(SI) <- targets
     
-    return(data_list)
   }else{
     print("Global Sensitivity not ready!")
   }
+  
+  #----------
+  # Heatmaps
+  #----------
+  if(heatmap){
+    
+    if(length(targets)==1){
+      stop("Provide more than 1 targets in order to create a heatmap
+           or turn \"heatmap\" to \"FALSE\".")
+    }
+    
+    # Transform SI matrix to long format dataframe
+    data_to_plot <- melt(SI)
+    colnames(data_to_plot) <- c("Parameters","Targets", "SI")
+    
+    heatmap_plot <- ggplot(data_to_plot, aes(x = Targets, y = Parameters,
+                                             fill = SI)) +
+      geom_tile(color = "white",
+                lwd = 1.5,
+                linetype = 1)+ # Add white borders to tiles
+      
+      geom_text(aes(label = format(round(SI, digits=3))),
+                color = "white", size = 4) + # Show the SI value
+      
+      coord_fixed() + #Transforms the tiles of the heatmap to squares 
+      
+      guides(fill = guide_colourbar(barwidth = 0.5,
+                                    barheight = 20)) +
+      
+      labs(title = "Sensitivity Coefficients",
+           y = "Parameters",
+           x = "Targets") +
+      
+      theme(plot.title =element_text(hjust = 0.5, size=30, face="bold"),
+            axis.title.y =element_text(hjust = 0.5, size=20, face="bold"),
+            axis.text.y=element_text(size=18),
+            axis.title.x =element_text(hjust = 0.5, size=20, face="bold"),
+            axis.text.x=element_text(size=18, 
+                                     angle = ifelse(length(targets)>5, -90, 0)),
+            legend.title=element_text(hjust = 0.01, size=20), 
+            legend.text=element_text(size=18))
+    Plots <- list(heatmap_plot)
+  }
+  
+  #-------------------------------------
+  # Create a list to return the results 
+  #-------------------------------------
+  
+  data_list <- list("Method"=method, "Targets"=targets,
+                    "Change of parameters" = dp,
+                    "Parameters" = parms_0, 
+                    "Normalized Sensitivity Coefficients"=data.frame(SI), 
+                    "Heatmap" = ifelse(heatmap, Plots, "FALSE"))
+  
+  return(data_list)
+  
+  
 }
 
-test <- PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.01, target = "Lungs",
-                 method = "Local",ode_settings = ode_settings) 
+targets <- c("Lungs", "Blood", "Liver")
+test <- PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.1,
+                         targets = targets,
+                         method = "Local",ode_settings = ode_settings, 
+                         heatmap = TRUE) 
+
 test
 
 
