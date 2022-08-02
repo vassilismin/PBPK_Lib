@@ -327,9 +327,9 @@ ode.func <- function(time, inits, params){
 #-----------------
 
 parms <- c("x_gen" = 0.1, # random value - unitless
-           "P_gen" = 0.1, # random value - unitless
-           "CLE_f" = 0.1,
-           "CLE_u" = 0.1)
+           "P_gen" = 5, # random value - unitless
+           "CLE_f" = 0.36,
+           "CLE_u" = 0.0026)
 
 params<-create.params(compartments,mass)
 inits <- create.inits(params, dose)
@@ -418,6 +418,7 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
     }
     
     # Calculate AUC of each target-compartment for the initial parameters
+    AUC_0 <- c()
     for (i in 1:N_targets) {
       AUC_0[i] <- AUC(solution_0[,"time"],solution_0[,targets[i]])
     }
@@ -487,7 +488,7 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
             axis.text.y=element_text(size=18),
             axis.title.x =element_text(hjust = 0.5, size=20, face="bold"),
             axis.text.x=element_text(size=18, 
-                                     angle = ifelse(length(targets)>5, -90, 0)),
+                                     angle = ifelse(length(targets)>5, 90, 0)),
             legend.title=element_text(hjust = 0.01, size=20), 
             legend.text=element_text(size=18))
     Plots <- list(heatmap_plot)
@@ -509,6 +510,8 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
 }
 
 targets <- c("Lungs", "Blood", "Liver")
+targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
+             "Git", "Bone", "Rob", "Feces", "Urine")
 test <- PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.1,
                          targets = targets,
                          method = "Local",ode_settings = ode_settings, 
