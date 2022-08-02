@@ -322,34 +322,6 @@ ode.func <- function(time, inits, params){
 }
 
 
-#-----------------
-# Prepare input
-#-----------------
-
-parms <- c("x_gen" = 0.1, # random value - unitless
-           "P_gen" = 5, # random value - unitless
-           "CLE_f" = 0.36,
-           "CLE_u" = 0.0026)
-
-params<-create.params(compartments,mass)
-inits <- create.inits(params, dose)
-sample_time <- c(0,1,3,7, 15, 30)*24 # hours
-
-ode_settings <- list(params=params, 
-                     inits=inits,
-                     sample_time=sample_time,
-                     solver= "default")
-
-
-# start_time <- Sys.time()
-# solution <- ode(times=sample_time, func=ode.func, y=inits, parms=params, 
-#                 method="bdf", rtol=1e-5, atol=1e-5)
-# end_time <- Sys.time()
-# #rowSums(solution[,2:21])
-# ODEs_solution_duration <- end_time - start_time
-# ODEs_solution_duration
-
-
 #---------------------
 # Custom AUC function
 #---------------------
@@ -509,9 +481,31 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
   
 }
 
+#-----------------
+# Prepare input
+#-----------------
+
+parms <- c("x_gen" = 0.1, # random value - unitless
+           "P_gen" = 5, # random value - unitless
+           "CLE_f" = 0.36,
+           "CLE_u" = 0.0026)
+
+params<-create.params(compartments,mass)
+inits <- create.inits(params, dose)
+sample_time <- c(0,1,3,7, 15, 30)*24 # hours
+
+ode_settings <- list(params=params, 
+                     inits=inits,
+                     sample_time=sample_time,
+                     solver= "default")
+
+
 targets <- c("Lungs", "Blood", "Liver")
 targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
              "Git", "Bone", "Rob", "Feces", "Urine")
+
+
+
 test <- PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.1,
                          targets = targets,
                          method = "Local",ode_settings = ode_settings, 
