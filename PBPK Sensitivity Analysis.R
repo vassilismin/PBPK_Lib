@@ -213,23 +213,23 @@ ode.func <- function(time, inits, params){
   with(as.list(c(inits, params)),{
     
     
-    x_ht <- x_gen
-    x_lu <- x_gen
-    x_li <- x_gen
-    x_spl <- x_gen
-    x_ki <- x_gen
-    x_git <- x_gen 
-    x_bone <- x_gen
-    x_rob <- x_gen
+    x_ht <- x_gen1
+    x_lu <- x_gen1
+    x_li <- x_gen1
+    x_spl <- x_gen1
+    x_ki <- x_gen2
+    x_git <- x_gen2 
+    x_bone <- x_gen2
+    x_rob <- x_gen2
     
-    P_ht <- P_gen
-    P_lu <- P_gen
-    P_li <- P_gen
-    P_spl <- P_gen
-    P_ki <- P_gen
-    P_git <- P_gen 
-    P_bone <- P_gen
-    P_rob <- P_gen
+    P_ht <- P_gen1
+    P_lu <- P_gen2
+    P_li <- P_gen1
+    P_spl <- P_gen2
+    P_ki <- P_gen1
+    P_git <- P_gen2 
+    P_bone <- P_gen2
+    P_rob <- P_gen1
     
     # Concentrations (mg of NPs)/(g of wet tissue)
     C_ht <- M_ht/w_ht
@@ -484,8 +484,10 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
 # Prepare input
 #-----------------
 
-parms <- c("x_gen" = 0.1, # random value - unitless
-           "P_gen" = 5, # random value - unitless
+parms <- c("x_gen1" = 0.1, # random value - unitless
+           "x_gen2" = 0.004, # random value - unitless
+           "P_gen1" = 5, # random value - unitless
+           "P_gen2" = 2.9, # random value - unitless 
            "CLE_f" = 0.36,
            "CLE_u" = 0.0026)
 
@@ -500,8 +502,8 @@ ode_settings <- list(params=params,
 
 
 targets <- c("Lungs", "Blood", "Liver")
-targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
-             "Git", "Bone", "Rob", "Feces", "Urine")
+#targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
+#             "Git", "Bone", "Rob", "Feces", "Urine")
 
 
 
