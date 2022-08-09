@@ -433,7 +433,7 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
     }
     
     # Transform SI matrix to long format dataframe
-    data_to_plot <- melt(SI)
+    data_to_plot <- reshape2::melt(SI)
     colnames(data_to_plot) <- c("Parameters","Targets", "SI")
     
     heatmap_plot <- ggplot(data_to_plot, aes(x = Targets, y = Parameters,
