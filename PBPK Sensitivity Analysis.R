@@ -337,7 +337,7 @@ AUC <- function(x, y){
 # SENSITIVITY ANALYSIS FUNCTION for PBPK Models
 #---------------------------------------------------
 
-PBPK_sensitivity <- function(model, parms, ranges, targets, method,
+PBPK_sensitivity <- function(model, parms, ranges, targets,
                              ode_settings, heatmap = FALSE){
   
   if(is.null(model)){
@@ -348,12 +348,7 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
     stop("A vector with the names and the values of the parameters for the 
          analysis must be provided")
   }
-  if(is.null(method)){
-    stop("The method of the sensitivity analysis must be defined
-         (\"Local\" or \"Global\")")
-  }
   
-
   # Local Sensitivity Analysis
   
   # Store the initial values of the parms in a vector
@@ -372,7 +367,7 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
   
   # Take all objects from the ode_settings list 
   constant_params <- ode_settings[[1]] # Take the constant parameters
-                                       # of the model
+  # of the model
   inits <- ode_settings[[2]] # Initial conditions of the ODEs
   sample_time <- ode_settings[[3]] # Time points of solution
   solver <- ifelse(ode_settings[[4]] == "default", "bdf", ode_settings[[4]])
@@ -417,7 +412,7 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
   }
   rownames(SI) <- names(parms)
   colnames(SI) <- targets
-
+  
   
   #----------
   # Heatmaps
@@ -466,15 +461,13 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
   # Create a list to return the results 
   #-------------------------------------
   
-  data_list <- list("Method"=method, "Targets"=targets,
+  data_list <- list("Targets"=targets,
                     "Change of parameters" = dp,
                     "Parameters" = parms_0, 
                     "Normalized Sensitivity Coefficients"=data.frame(SI), 
                     "Heatmap" = ifelse(heatmap, Plots, "FALSE"))
   
   return(data_list)
-  
-  
 }
 
 #-----------------
@@ -506,7 +499,7 @@ targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
 
 test <- PBPK_sensitivity(model = ode.func, parms=parms, ranges = 0.1,
                          targets = targets,
-                         method = "Local",ode_settings = ode_settings, 
+                         ode_settings = ode_settings, 
                          heatmap = TRUE) 
 
 test
