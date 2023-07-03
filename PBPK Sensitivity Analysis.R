@@ -353,74 +353,71 @@ PBPK_sensitivity <- function(model, parms, ranges, targets, method,
          (\"Local\" or \"Global\")")
   }
   
-  if(method=="Local"){
-    # Local Sensitivity Analysis
-    
-    # Store the initial values of the parms in a vector
-    parms_0 <- parms
-    
-    # The variation dp of each parameter will be equal to "ranges" value 
-    if(!is.numeric(ranges) | length(ranges) != 1 | ranges<=0 | ranges>1){
-      # "ranges" must be a single numeric value in (0,1]
-      stop("For local sensitivity analysis \"ranges\"  should be 
-           a single numeric value in (0,1]")
-    }else{dp <- ranges}
-    
-    # Get the number of the parameters and targets
-    N_parms <- length(parms_0) # The total number of parameters to be analysed
-    N_targets <- length(targets)
-    
-    # Take all objects from the ode_settings list 
-    constant_params <- ode_settings[[1]] # Take the constant parameters
-                                         # of the model
-    inits <- ode_settings[[2]] # Initial conditions of the ODEs
-    sample_time <- ode_settings[[3]] # Time points of solution
-    solver <- ifelse(ode_settings[[4]] == "default", "bdf", ode_settings[[4]])
-    # Select the solver to use later
-    
-    # Calculate the ODEs for the initial parameters
-    solution_0 <- ode(times=sample_time, func=model, y=inits, 
-                      parms=c(constant_params, parms_0), 
-                      method=solver, rtol=1e-5, atol=1e-5)
-    
-    if(sum(!(targets %in% colnames(solution_0))) != 0){
-      stop("As \"targets\" should be provided the name(s) of one or more
-      of the outputs (compertments) of the PBPK model")
-    }
-    
-    # Calculate AUC of each target-compartment for the initial parameters
-    AUC_0 <- c()
-    for (i in 1:N_targets) {
-      AUC_0[i] <- AUC(solution_0[,"time"],solution_0[,targets[i]])
-    }
-    
-    # Initialize a vector to store the sensitivity indexes
-    SI <- matrix(NA, nrow = N_parms, ncol = N_targets)
-    for (i in 1:N_parms) {
-      parms <- parms_0
-      parms[i] <- parms[i]*(1 + dp)
-      # Merge the new parms vector with the constant params of the model
-      params <- c(constant_params, parms)
-      
-      # Solve the ode system for given initial values and time
-      solution <- ode(times=sample_time, func=model, y=inits, parms=params, 
-                      method=solver, rtol=1e-5, atol=1e-5)
-      
-      for (j in 1:N_targets) {
-        # Calculate AUC for the target compartment j
-        AUC_j <- AUC(solution[,"time"],solution[,targets[j]])
-        
-        # Calculate sensitivity index of parameter i 
-        # Relative Sensitivity = (dAUC/AUC)/(dp/p)
-        SI[i,j] <- ((AUC_j-AUC_0[j])/AUC_0[j])/(dp/ parms_0[i])
-      }
-    }
-    rownames(SI) <- names(parms)
-    colnames(SI) <- targets
-    
-  }else{
-    print("Global Sensitivity not ready!")
+
+  # Local Sensitivity Analysis
+  
+  # Store the initial values of the parms in a vector
+  parms_0 <- parms
+  
+  # The variation dp of each parameter will be equal to "ranges" value 
+  if(!is.numeric(ranges) | length(ranges) != 1 | ranges<=0 | ranges>1){
+    # "ranges" must be a single numeric value in (0,1]
+    stop("For local sensitivity analysis \"ranges\"  should be 
+         a single numeric value in (0,1]")
+  }else{dp <- ranges}
+  
+  # Get the number of the parameters and targets
+  N_parms <- length(parms_0) # The total number of parameters to be analysed
+  N_targets <- length(targets)
+  
+  # Take all objects from the ode_settings list 
+  constant_params <- ode_settings[[1]] # Take the constant parameters
+                                       # of the model
+  inits <- ode_settings[[2]] # Initial conditions of the ODEs
+  sample_time <- ode_settings[[3]] # Time points of solution
+  solver <- ifelse(ode_settings[[4]] == "default", "bdf", ode_settings[[4]])
+  # Select the solver to use later
+  
+  # Calculate the ODEs for the initial parameters
+  solution_0 <- ode(times=sample_time, func=model, y=inits, 
+                    parms=c(constant_params, parms_0), 
+                    method=solver, rtol=1e-5, atol=1e-5)
+  
+  if(sum(!(targets %in% colnames(solution_0))) != 0){
+    stop("As \"targets\" should be provided the name(s) of one or more
+    of the outputs (compertments) of the PBPK model")
   }
+  
+  # Calculate AUC of each target-compartment for the initial parameters
+  AUC_0 <- c()
+  for (i in 1:N_targets) {
+    AUC_0[i] <- AUC(solution_0[,"time"],solution_0[,targets[i]])
+  }
+  
+  # Initialize a vector to store the sensitivity indexes
+  SI <- matrix(NA, nrow = N_parms, ncol = N_targets)
+  for (i in 1:N_parms) {
+    parms <- parms_0
+    parms[i] <- parms[i]*(1 + dp)
+    # Merge the new parms vector with the constant params of the model
+    params <- c(constant_params, parms)
+    
+    # Solve the ode system for given initial values and time
+    solution <- ode(times=sample_time, func=model, y=inits, parms=params, 
+                    method=solver, rtol=1e-5, atol=1e-5)
+    
+    for (j in 1:N_targets) {
+      # Calculate AUC for the target compartment j
+      AUC_j <- AUC(solution[,"time"],solution[,targets[j]])
+      
+      # Calculate sensitivity index of parameter i 
+      # Relative Sensitivity = (dAUC/AUC)/(dp/p)
+      SI[i,j] <- ((AUC_j-AUC_0[j])/AUC_0[j])/((parms[i] - parms_0[i])/ parms_0[i])
+    }
+  }
+  rownames(SI) <- names(parms)
+  colnames(SI) <- targets
+
   
   #----------
   # Heatmaps
@@ -501,9 +498,9 @@ ode_settings <- list(params=params,
                      solver= "default")
 
 
-targets <- c("Lungs", "Blood", "Liver")
-#targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
-#             "Git", "Bone", "Rob", "Feces", "Urine")
+#targets <- c("Lungs", "Blood", "Liver")
+targets <- c("Blood", "Heart", "Lungs", "Liver", "Spleen", "Kidneys",
+             "Git", "Bone", "Rob", "Feces", "Urine")
 
 
 
